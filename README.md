@@ -38,7 +38,10 @@ pip install -r requirements.txt
 ```
 
 ### 3. Initialize Database
-The database will be automatically created when you run the app for the first time.
+```bash
+python setup_db.py
+```
+This will create sample users, courses, lessons, and quizzes.
 
 ### 4. Run the Application
 ```bash
