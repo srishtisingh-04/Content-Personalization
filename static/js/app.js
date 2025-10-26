@@ -269,11 +269,35 @@ function logout() {
 
 // Load courses
 function loadCourses() {
+    console.log('Loading courses...');
     fetch(`${API_BASE}/courses/`)
-    .then(response => response.json())
+    .then(response => {
+        console.log('Courses response status:', response.status);
+        if (!response.ok) {
+            console.error('Response not OK:', response.status);
+        }
+        return response.json();
+    })
     .then(courses => {
+        console.log('Courses received:', courses.length, 'courses');
         const coursesList = document.getElementById('coursesList');
         coursesList.innerHTML = '';
+        
+        if (!courses || courses.length === 0) {
+            coursesList.innerHTML = `
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                            <h5 class="card-title">No courses available</h5>
+                            <p class="card-text">Please run <code>python setup_db.py</code> to initialize the database with sample courses.</p>
+                            <button class="btn btn-primary" onclick="showHome()">Go to Home</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
         
         courses.forEach(course => {
             const courseCard = createCourseCard(course);
@@ -281,7 +305,17 @@ function loadCourses() {
         });
     })
     .catch(error => {
-        showAlert('Failed to load courses', 'danger');
+        console.error('Failed to load courses:', error);
+        const coursesList = document.getElementById('coursesList');
+        coursesList.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    <h5>Failed to load courses</h5>
+                    <p>Error: ${error.message}</p>
+                    <p class="small">Make sure you have run <code>python setup_db.py</code> to initialize the database.</p>
+                </div>
+            </div>
+        `;
     });
 }
 

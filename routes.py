@@ -110,8 +110,14 @@ def update_profile():
 # Course Routes
 @courses_bp.route('/', methods=['GET'])
 def get_courses():
-    courses = Course.query.all()
-    return jsonify([course.to_dict() for course in courses])
+    try:
+        courses = Course.query.all()
+        print(f"Found {len(courses)} courses")
+        courses_data = [course.to_dict() for course in courses]
+        return jsonify(courses_data)
+    except Exception as e:
+        print(f"Error in get_courses: {str(e)}")
+        return jsonify({'error': str(e), 'courses': []}), 500
 
 @courses_bp.route('/<int:course_id>', methods=['GET'])
 def get_course(course_id):
@@ -315,37 +321,56 @@ def get_recommendations():
 @learner_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 def get_dashboard():
-    user_id = get_jwt_identity()
-    
-    # Get user's enrollments
-    enrollments = Enrollment.query.filter_by(user_id=user_id).all()
-    
-    # Get recent quiz attempts
-    recent_attempts = QuizAttempt.query.filter_by(user_id=user_id).order_by(
-        QuizAttempt.attempted_at.desc()
-    ).limit(5).all()
-    
-    # Calculate statistics
-    total_courses = len(enrollments)
-    completed_courses = len([e for e in enrollments if e.completed_at])
-    total_quizzes_taken = len(QuizAttempt.query.filter_by(user_id=user_id).all())
-    passed_quizzes = len(QuizAttempt.query.filter_by(user_id=user_id, passed=True).all())
-    
-    # Prepare enrollments with course data
-    enrollments_data = []
-    for enrollment in enrollments:
-        enrollment_dict = enrollment.to_dict()
-        enrollment_dict['course'] = enrollment.course.to_dict()
-        enrollments_data.append(enrollment_dict)
-    
-    return jsonify({
-        'total_courses': total_courses,
-        'completed_courses': completed_courses,
-        'total_quizzes_taken': total_quizzes_taken,
-        'passed_quizzes': passed_quizzes,
-        'recent_attempts': [attempt.to_dict() for attempt in recent_attempts],
-        'enrollments': enrollments_data
-    })
+    try:
+        user_id = get_jwt_identity()
+        print(f"Dashboard request for user: {user_id}")
+        
+        # Get user's enrollments
+        enrollments = Enrollment.query.filter_by(user_id=user_id).all()
+        print(f"User has {len(enrollments)} enrollments")
+        
+        # Get recent quiz attempts
+        recent_attempts = QuizAttempt.query.filter_by(user_id=user_id).order_by(
+            QuizAttempt.attempted_at.desc()
+        ).limit(5).all()
+        
+        # Calculate statistics
+        total_courses = len(enrollments)
+        completed_courses = len([e for e in enrollments if e.completed_at])
+        total_quizzes_taken = len(QuizAttempt.query.filter_by(user_id=user_id).all())
+        passed_quizzes = len(QuizAttempt.query.filter_by(user_id=user_id, passed=True).all())
+        
+        # Prepare enrollments with course data
+        enrollments_data = []
+        for enrollment in enrollments:
+            try:
+                enrollment_dict = enrollment.to_dict()
+                enrollment_dict['course'] = enrollment.course.to_dict()
+                enrollments_data.append(enrollment_dict)
+            except Exception as e:
+                print(f"Error processing enrollment {enrollment.id}: {str(e)}")
+        
+        return jsonify({
+            'total_courses': total_courses,
+            'completed_courses': completed_courses,
+            'total_quizzes_taken': total_quizzes_taken,
+            'passed_quizzes': passed_quizzes,
+            'recent_attempts': [attempt.to_dict() for attempt in recent_attempts],
+            'enrollments': enrollments_data
+        })
+    except Exception as e:
+        print(f"Dashboard error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': str(e),
+            'total_courses': 0,
+            'completed_courses': 0,
+            'total_quizzes_taken': 0,
+            'passed_quizzes': 0,
+            'recent_attempts': [],
+            'enrollments': []
+        }), 500
 
 # Admin Routes
 @admin_bp.route('/users', methods=['GET'])
